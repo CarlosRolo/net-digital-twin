@@ -213,6 +213,7 @@ alert_engine.py
 **Carlos David Rodriguez Lopez**  
 Telematic Engineer — ESPOCH  
 Riobamba, Chimborazo, Ecuador  
+Manta, Manabí, Ecuador  
 GitHub: [github.com/CarlosRolo](https://github.com/CarlosRolo)  
 LinkedIn: [linkedin.com/in/carlosdrodriguezl](https://linkedin.com/in/carlosdrodriguezl)
 
