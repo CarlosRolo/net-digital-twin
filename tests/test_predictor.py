@@ -89,7 +89,7 @@ class TestAnomalyDetector:
         for _ in range(80):
             detector.detect('d1', 'utilization', 0.3)
         result = detector.detect('d1', 'utilization', 0.99)
-        assert result.is_anomaly is True
+        assert result.is_anomaly == True
 
     def test_summary_structure(self):
         from pipeline.anomaly.anomaly_detector import AnomalyDetector
