@@ -1,0 +1,116 @@
+{
+  "title": "NET-08 Network Digital Twin",
+  "uid": "net08-digital-twin",
+  "version": 1,
+  "schemaVersion": 38,
+  "refresh": "5s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "RX Bytes por nodo",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"network-metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface_metrics\")\n  |> filter(fn: (r) => r._field == \"rx_bytes\")\n  |> aggregateWindow(every: 5s, fn: mean)\n  |> group(columns: [\"node\"])"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "TX Bytes por nodo",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"network-metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface_metrics\")\n  |> filter(fn: (r) => r._field == \"tx_bytes\")\n  |> aggregateWindow(every: 5s, fn: mean)\n  |> group(columns: [\"node\"])"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Errores RX por nodo",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"network-metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface_metrics\")\n  |> filter(fn: (r) => r._field == \"rx_errors\")\n  |> aggregateWindow(every: 5s, fn: sum)\n  |> group(columns: [\"node\"])"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "fixed", "fixedColor": "red" }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Acciones de remediacion",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"network-metrics\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"remediation_actions\")\n  |> aggregateWindow(every: 30s, fn: count)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "fixed", "fixedColor": "orange" }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Total interfaces monitoreadas",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 16, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "influxdb" },
+          "query": "from(bucket: \"network-metrics\")\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"interface_metrics\")\n  |> filter(fn: (r) => r._field == \"rx_bytes\")\n  |> last()\n  |> count()"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background"
+      },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "fixed", "fixedColor": "green" } }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Estado del gemelo",
+      "type": "text",
+      "gridPos": { "x": 6, "y": 16, "w": 18, "h": 4 },
+      "options": {
+        "mode": "markdown",
+        "content": "## NET-08 Network Digital Twin\n**Stack:** Mininet · gNMI · InfluxDB · LSTM · Grafana\n\n**Autor:** Carlos David Rodriguez Lopez — ESPOCH\n\n**GitHub:** [github.com/CarlosRolo/net-digital-twin](https://github.com/CarlosRolo/net-digital-twin)"
+      }
+    }
+  ]
+}
