@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Motor de inferencia en tiempo real.
+NET-08: Predictor en tiempo real
 Carga el modelo LSTM y predice probabilidad de falla por ventana.
 """
 import os
@@ -20,23 +20,24 @@ THRESHOLD   = float(os.getenv('ALERT_THRESHOLD', 0.75))
 
 
 class FailurePredictor:
+
     def __init__(self):
         self.model  = None
         self.scaler = None
         self._load()
 
     def _load(self):
-        if Path(MODEL_PATH).exists():
+        if Path(MODEL_PATH).exists() and Path(SCALER_PATH).exists():
             self.model  = tf.keras.models.load_model(MODEL_PATH)
             self.scaler = joblib.load(SCALER_PATH)
             print(f'[Predictor] Modelo cargado desde {MODEL_PATH}')
         else:
-            print(f'[Predictor] Modelo no encontrado. Ejecuta: python ml/training/train_lstm.py')
+            print('[Predictor] Modelo no encontrado. Ejecuta: make train')
 
     def predict(self, window: np.ndarray) -> dict:
         """
         window: array (WINDOW_SIZE, N_FEATURES)
-        Returns: {'probability': float, 'alert': bool, 'risk_level': str}
+        Returns: probability, alert, risk_level
         """
         if self.model is None:
             return {'probability': 0.0, 'alert': False, 'risk_level': 'unknown'}
@@ -61,7 +62,6 @@ class FailurePredictor:
 
 if __name__ == '__main__':
     predictor = FailurePredictor()
-    # Test con ventana aleatoria
     test_window = np.random.rand(60, 4)
     result = predictor.predict(test_window)
-    print(f'[Predictor] Resultado: {result}')
+    print(f'[Predictor] Test resultado: {result}')
