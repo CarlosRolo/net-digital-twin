@@ -1,40 +1,41 @@
 #!/usr/bin/env python3
 """
-Colector gNMI — recolecta métricas de interfaces en tiempo real.
-En entorno de laboratorio usa polling HTTP a OVS como fallback.
+NET-08: Colector gNMI
+Recolecta metricas de interfaces y escribe en InfluxDB.
 """
 import time
 import subprocess
-import json
+import random
 import os
 from datetime import datetime
-from influxdb_client import InfluxDBClient, Point, WriteOptions
+from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 from dotenv import load_dotenv
 
 load_dotenv()
 
-INFLUX_URL   = os.getenv('INFLUXDB_URL', 'http://localhost:8086')
-INFLUX_TOKEN = os.getenv('INFLUXDB_TOKEN', 'my-super-secret-token')
-INFLUX_ORG   = os.getenv('INFLUXDB_ORG', 'telecom-lab')
-INFLUX_BUCKET= os.getenv('INFLUXDB_BUCKET', 'network-metrics')
+INFLUX_URL    = os.getenv('INFLUXDB_URL',    'http://localhost:8086')
+INFLUX_TOKEN  = os.getenv('INFLUXDB_TOKEN',  'my-super-secret-token')
+INFLUX_ORG    = os.getenv('INFLUXDB_ORG',    'telecom-lab')
+INFLUX_BUCKET = os.getenv('INFLUXDB_BUCKET', 'network-metrics')
+POLL_INTERVAL = int(os.getenv('POLL_INTERVAL', 5))
 
-INTERFACES = ['c1-eth0', 'c1-eth1', 'd1-eth0', 'd2-eth0', 'd3-eth0',
-              'h1-eth0', 'h2-eth0', 'h3-eth0', 'h4-eth0', 'h5-eth0']
+INTERFACES = [
+    'c1-eth0', 'c1-eth1',
+    'd1-eth0', 'd2-eth0', 'd3-eth0',
+    'h1-eth0', 'h2-eth0', 'h3-eth0', 'h4-eth0', 'h5-eth0'
+]
 
-POLL_INTERVAL = 5  # segundos
 
-
-def get_ovs_stats(interface: str) -> dict:
-    """Obtiene estadísticas de interfaz via ovs-vsctl."""
+def get_interface_stats(interface: str) -> dict:
+    """Obtiene estadisticas via ovs-vsctl. Modo simulacion si Mininet no corre."""
     try:
         cmd = f"ovs-vsctl list interface {interface}"
         result = subprocess.run(cmd.split(), capture_output=True, text=True, timeout=5)
-        stats = {
-            'rx_bytes': 0, 'tx_bytes': 0,
-            'rx_packets': 0, 'tx_packets': 0,
-            'rx_errors': 0, 'tx_errors': 0,
-        }
+        if result.returncode != 0:
+            raise RuntimeError('ovs no disponible')
+        stats = {'rx_bytes': 0, 'tx_bytes': 0, 'rx_packets': 0,
+                 'tx_packets': 0, 'rx_errors': 0, 'tx_errors': 0}
         for line in result.stdout.split('\n'):
             if 'rx_bytes' in line:
                 try:
@@ -43,28 +44,23 @@ def get_ovs_stats(interface: str) -> dict:
                     pass
         return stats
     except Exception:
-        # Modo simulación cuando Mininet no está corriendo
-        import random
         base = random.randint(1_000_000, 100_000_000)
         return {
-            'rx_bytes': base,
-            'tx_bytes': int(base * 0.8),
+            'rx_bytes':   base,
+            'tx_bytes':   int(base * random.uniform(0.5, 0.9)),
             'rx_packets': base // 1500,
             'tx_packets': int(base * 0.8) // 1500,
-            'rx_errors': random.randint(0, 5),
-            'tx_errors': random.randint(0, 2),
+            'rx_errors':  random.randint(0, 5),
+            'tx_errors':  random.randint(0, 2),
         }
 
 
 def collect_and_publish(write_api):
-    """Un ciclo de recolección y escritura en InfluxDB."""
     timestamp = datetime.utcnow()
     points = []
-
     for iface in INTERFACES:
-        stats = get_ovs_stats(iface)
-        node = iface.split('-')[0]
-
+        stats = get_interface_stats(iface)
+        node  = iface.split('-')[0]
         point = (
             Point("interface_metrics")
             .tag("interface", iface)
@@ -78,16 +74,14 @@ def collect_and_publish(write_api):
             .time(timestamp)
         )
         points.append(point)
-
     write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=points)
-    print(f'[Collector] {len(points)} métricas escritas @ {timestamp.strftime("%H:%M:%S")}')
+    print(f'[Collector] {len(points)} metricas @ {timestamp.strftime("%H:%M:%S")}')
 
 
 def run():
-    client = InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=INFLUX_ORG)
+    client    = InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=INFLUX_ORG)
     write_api = client.write_api(write_options=SYNCHRONOUS)
-
-    print(f'[Collector] Iniciando recolección cada {POLL_INTERVAL}s...')
+    print(f'[Collector] Iniciando cada {POLL_INTERVAL}s — InfluxDB: {INFLUX_URL}')
     try:
         while True:
             collect_and_publish(write_api)

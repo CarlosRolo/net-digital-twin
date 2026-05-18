@@ -30,17 +30,6 @@ services:
     depends_on:
       - influxdb
 
-  collector:
-    build:
-      context: .
-      dockerfile: telemetry/Dockerfile
-    container_name: dt-collector
-    depends_on:
-      - influxdb
-    env_file:
-      - .env
-    network_mode: host
-
 volumes:
   influxdb-data:
   grafana-data:
